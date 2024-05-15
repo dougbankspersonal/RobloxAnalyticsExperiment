@@ -1,11 +1,14 @@
 {
-  "name": "GoogleAnalytics",
+  "name": "Analytics",
 	"tree": {
 		"$className": "DataModel",
 
 		"ReplicatedStorage": {
 			"$className": "ReplicatedStorage",
-      "$path": "src/replicatedStorage"
+      "$path": "src/replicatedStorage",
+			"GameAnalytics": {
+				"$path": "../GA-SDK-ROBLOX/default.project.json"
+			}
 		},
 
 		"ServerScriptService": {

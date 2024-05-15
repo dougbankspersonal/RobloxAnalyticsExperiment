@@ -32,13 +32,6 @@ local mockPlayerDescs = {
     },
 }
 
-local gameConfigNames = {
-    "v 1.0.01",
-    "v 1.0.02",
-    "v 1.0.03",
-    "v 1.0.04",
-}
-
 local maxNumPlayers = #mockPlayerDescs
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -46,7 +39,8 @@ local analytics = require(ReplicatedStorage:WaitForChild("analytics"))
 
 local gameState = {
     playing = false,
-    gameConfig = 1,
+    gameConfigIndex = 1,
+    gameLevelIndex = 1,
     mockPlayerDescs = {},
     gameId = 0,
 }
@@ -57,6 +51,7 @@ local inGameButtonsByPlayerIndex = {}
 local inGameButtons = {}
 local outGameButtons = {}
 local gameConfigButtons = {}
+local gameLevelButtons = {}
 
 local function setButtonSelected(button, selected) 
     button.BackgroundColor3 = selected and Color3.new(0.5, 0.5, 0.5) or Color3.new(1, 1, 1)
@@ -87,7 +82,10 @@ local function updateUI()
         setButtonEnabled(button, not gameState.playing)
     end
     for buttonIndex, button in ipairs(gameConfigButtons) do 
-        setButtonSelected(button, gameState.gameConfig == buttonIndex)
+        setButtonSelected(button, gameState.gameConfigIndex == buttonIndex)
+    end
+    for buttonIndex, button in ipairs(gameLevelButtons) do 
+        setButtonSelected(button, gameState.gameLevelIndex == buttonIndex)
     end
 end
 
@@ -190,7 +188,7 @@ local function addStartStopControls()
             gameId = gameId + 1
             gameState.actionCount = 0
             
-            analytics.recordGameStart(gameState.gameId, gameState.gameConfig, gameState.mockPlayerDescs)
+            analytics.recordGameStart(gameState.gameId, gameState.gameConfigIndex, gameState.gameLevelIndex, gameState.mockPlayerDescs)
 
             updateUI()
         end)
@@ -218,9 +216,9 @@ end
 
 local function addGameConfigControls()
     local rowContent = addRowWithLabel("Game Config")
-    for i, gameConfigName in ipairs(gameConfigNames) do
+    for gameConfigIndex, gameConfigName in ipairs(analytics.gameConfigNames) do
         local button = addButton(rowContent, gameConfigName, function()
-            gameState.gameConfig = i
+            gameState.gameConfigIndex = gameConfigIndex
             updateUI()
             end)
         table.insert(outGameButtons, button)
@@ -228,13 +226,24 @@ local function addGameConfigControls()
     end
 end
 
+local function addGameLevelControls()
+    local rowContent = addRowWithLabel("Game Level")
+    for gameLevelIndex, gameLevelName in ipairs(analytics.gameLevelNames) do
+        local button = addButton(rowContent, gameLevelName, function()
+            gameState.gameLevelIndex = gameLevelIndex
+            updateUI()
+            end)
+        table.insert(outGameButtons, button)
+        table.insert(gameLevelButtons, button)
+    end
+end
+
 local function addPlayerControls(playerIndex)
     local rowContent = addRowWithLabel(string.format("Player %d Actions", playerIndex))
-    local numActions = 3
-    for i = 1, numActions do
-        local button = addButton(rowContent, string.format("Action %d", i), function()
+    for _, actionName in analytics.playerActions do
+        local button = addButton(rowContent, actionName, function()
             gameState.actionCount = gameState.actionCount + 1
-            analytics.recordAction(i, gameState.mockPlayerDescs[playerIndex].id)
+            analytics.recordAction(actionName, gameState.mockPlayerDescs[playerIndex].id)
         end)
         if not inGameButtonsByPlayerIndex[playerIndex] then
             inGameButtonsByPlayerIndex[playerIndex] = {}
@@ -279,11 +288,13 @@ local function addMainGui()
 
     addStartStopControls()
     addGameConfigControls()
+    addGameLevelControls()
     for i = 1, maxNumPlayers do
         addPlayerControls(i)
     end
     updateUI()
 end
 
+analytics.init()
 turnOffPlayerControls()
 addMainGui()
